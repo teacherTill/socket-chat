@@ -1,0 +1,13 @@
+{
+  "name": "socket-chat-lesson",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Учебный чат на Express и Socket.IO",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}

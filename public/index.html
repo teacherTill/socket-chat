@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Socket.IO — учебный чат</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      background: #f3f5f9;
+      color: #202533;
+      font: 16px/1.5 system-ui, sans-serif;
+    }
+    main {
+      max-width: 720px;
+      margin: auto;
+      padding: 24px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px #18244012;
+    }
+    h1 { margin-top: 0; }
+    .row, #message-form { display: flex; gap: 8px; }
+    input, button {
+      min-width: 0;
+      padding: 11px 13px;
+      border: 1px solid #ccd2df;
+      border-radius: 8px;
+      font: inherit;
+    }
+    input { flex: 1; }
+    button {
+      border: 0;
+      background: #455ce9;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled { background: #aab1c7; cursor: default; }
+    #status { color: #687087; font-size: 14px; }
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 260px;
+      max-height: 420px;
+      overflow-y: auto;
+      margin: 16px 0;
+      padding: 16px;
+      border: 1px solid #e0e4ed;
+      border-radius: 10px;
+      list-style: none;
+    }
+    #messages li { overflow-wrap: anywhere; }
+    .system { color: #788096; font-style: italic; }
+    #message-form { margin-top: 12px; }
+    @media (max-width: 560px) {
+      main { padding: 18px; }
+      .row { flex-wrap: wrap; }
+      .row input { flex-basis: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Учебный чат</h1>
+    <p>Открой страницу в нескольких вкладках, чтобы проверить обмен сообщениями.</p>
+
+    <form id="join-form" class="row">
+      <input id="username" placeholder="Ваше имя" maxlength="24" required>
+      <input id="room" value="general" placeholder="Комната" maxlength="32" required>
+      <button>Войти</button>
+    </form>
+
+    <p id="status">Подключаемся к серверу…</p>
+    <ul id="messages" aria-live="polite"></ul>
+
+    <form id="message-form">
+      <input id="message" placeholder="Сначала войдите в комнату" maxlength="500" disabled>
+      <button id="send" disabled>Отправить</button>
+    </form>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const joinForm = document.querySelector("#join-form");
+    const messageForm = document.querySelector("#message-form");
+    const usernameInput = document.querySelector("#username");
+    const roomInput = document.querySelector("#room");
+    const messageInput = document.querySelector("#message");
+    const sendButton = document.querySelector("#send");
+    const messages = document.querySelector("#messages");
+    const status = document.querySelector("#status");
+
+    socket.on("connect", () => {
+      status.textContent = "Соединение с сервером установлено";
+    });
+
+    socket.on("disconnect", () => {
+      status.textContent = "Соединение потеряно. Переподключаемся…";
+      messageInput.disabled = true;
+      sendButton.disabled = true;
+    });
+
+    socket.on("connect_error", (error) => {
+      status.textContent = `Ошибка подключения: ${error.message}`;
+    });
+
+    joinForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const username = usernameInput.value.trim();
+      const room = roomInput.value.trim().toLowerCase();
+      if (!username || !room) return;
+
+      socket.emit("chat:join", { username, room });
+      status.textContent = `Вы: ${username} · Комната: ${room}`;
+      messageInput.disabled = false;
+      sendButton.disabled = false;
+      messageInput.placeholder = "Введите сообщение";
+      messageInput.focus();
+    });
+
+    messageForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      socket.emit("chat:message", text);
+      messageInput.value = "";
+      messageInput.focus();
+    });
+
+    socket.on("chat:message", ({ username, text, time }) => {
+      const item = document.createElement("li");
+      item.textContent = `${time} · ${username}: ${text}`;
+      messages.append(item);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on("chat:system", (text) => {
+      const item = document.createElement("li");
+      item.className = "system";
+      item.textContent = text;
+      messages.append(item);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on("chat:users", (count) => {
+      status.textContent = `${status.textContent.split(" · Участников:")[0]} · Участников: ${count}`;
+    });
+  </script>
+</body>
+</html>
