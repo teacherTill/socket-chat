@@ -53,7 +53,7 @@ io.on('connection', (socket) => {
       }),
     })
   })
-  // при потере соединения
+  // при потере соединения.
 
   socket.on('disconnect', () => {
     const { username, room } = socket.data
